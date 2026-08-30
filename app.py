@@ -17,8 +17,8 @@ st.set_page_config(page_title="스마트도시 서비스 수준 대시보드", l
 SHEET_NAME = "스마트도시_웹용 (구글시트)"
 FORMULA_NOTE = ("산식: Z = (원자료 − 평균) ÷ 표준편차(ddof=1) × 방향, "
                 "T = 50 + 10Z, 백분위 = Z 평균순위 × 100 (지표별·비교집단 내)")
-MAP_NOTE = "시군구 경계: 2025-06-30 기준(SGIS 코드), 약 100 m 단순화"
-GEOJSON_PATH = Path(__file__).parent / "data" / "sgg_2025.geojson"
+MAP_NOTE = "시군구 경계: 2025-06-30 기준(SGIS 코드)"
+GEOJSON_PATH = Path(__file__).parent / "data" / "sgg_korea.geojson"
 LIGHT_BAR, DARK_BAR = "#9ecae1", "#1c5ba6"     # 진단 막대(50 미만/이상)
 MISS_GRAY = "#d9d9d9"                           # 지도 결측
 BORDER_GRAY = "#999999"                         # 지도 경계선
