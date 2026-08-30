@@ -23,7 +23,7 @@ SIDO_LINES_PATH = Path(__file__).parent / "data" / "sido_lines.geojson"   # 시�
 LIGHT_BAR, DARK_BAR = "#9ecae1", "#1c5ba6"     # 진단 막대(50 미만/이상)
 MISS_GRAY = "#d9d9d9"                           # 지도 결측
 BORDER_GRAY = "#999999"                         # 지도 시군구 경계선
-SIDO_BORDER = "#7a7a7a"                         # 지도 시도 경계선(시군구보다 굵고 짙게)
+SIDO_BORDER = "#8c8c8c"                         # 지도 시도 경계선(시군구보다 약간 굵고 짙게)
 NONE_SGG = "전체"
 NUMFMT = {
     "Z점수": st.column_config.NumberColumn(format="%.2f"),
@@ -221,32 +221,36 @@ with c_map:
         rng = (vals.quantile(.05), vals.quantile(.95))
         if rng[0] == rng[1]:
             rng = (vals.min(), max(vals.max(), vals.min() + 1))
-    mfig = px.choropleth(present, geojson=gj, locations="지역", featureidkey="properties.지역",
-                         color=basis, color_continuous_scale=scale, range_color=rng,
-                         custom_data=["지역", "원자료", "T표시", "상위표시", "순위표시"])
-    mfig.update_traces(marker_line_color=BORDER_GRAY, marker_line_width=0.7,
-                       hovertemplate="%{customdata[0]}<br>원자료 %{customdata[1]}"
-                                     "<br>T점수 %{customdata[2]} · %{customdata[3]}"
-                                     "<br>순위 %{customdata[4]}<extra></extra>")
+    # MapLibre 벡터 엔진(Choroplethmap): geo 엔진과 달리 깊은 확대에서도 경계가 어긋나지 않는다.
+    # 타일·토큰 불필요(style="white-bg" = 배경 지도 없음).
+    # px.choropleth_map 대신 go 직접 구성: 공유 coloraxis가 걸리면 Streamlit 내장 plotly.js에서 렌더링이 죽는다.
+    mfig = go.Figure(go.Choroplethmap(
+        geojson=gj, locations=present["지역"], featureidkey="properties.지역",
+        z=present[basis], colorscale=scale, zmin=rng[0], zmax=rng[1],
+        marker_line_color=BORDER_GRAY, marker_line_width=0.7,
+        colorbar=dict(title=basis),
+        customdata=present[["지역", "원자료", "T표시", "상위표시", "순위표시"]].to_numpy(),
+        hovertemplate="%{customdata[0]}<br>원자료 %{customdata[1]}"
+                      "<br>T점수 %{customdata[2]} · %{customdata[3]}"
+                      "<br>순위 %{customdata[4]}<extra></extra>"))
     if not missing.empty:
-        mfig.add_trace(go.Choropleth(
+        mfig.add_trace(go.Choroplethmap(
             geojson=gj, locations=missing["지역"], featureidkey="properties.지역",
             z=[0] * len(missing), colorscale=[[0, MISS_GRAY], [1, MISS_GRAY]], showscale=False,
             marker_line_color=BORDER_GRAY, marker_line_width=0.7,
             hovertemplate="%{location}<br>결측<extra></extra>"))
     sido_lons, sido_lats = load_sido_lines()
-    mfig.add_trace(go.Scattergeo(          # 시도 내부 경계 오버레이(해안선은 건드리지 않음)
+    mfig.add_trace(go.Scattermap(          # 시도 내부 경계 오버레이(해안선은 건드리지 않음)
         lon=sido_lons, lat=sido_lats, mode="lines",
-        line=dict(color=SIDO_BORDER, width=1.3),
+        line=dict(color=SIDO_BORDER, width=1.1),
         hoverinfo="skip", showlegend=False))
     if region is not None:
-        mfig.add_trace(go.Choropleth(
+        mfig.add_trace(go.Choroplethmap(
             geojson=gj, locations=[region], featureidkey="properties.지역",
             z=[0], colorscale=[[0, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0)"]], showscale=False,
             marker_line_color="crimson", marker_line_width=2.5, hoverinfo="skip"))
-    mfig.update_geos(fitbounds="locations", visible=False, projection_type="mercator")
-    mfig.update_layout(height=430, margin=dict(t=10, b=10, l=0, r=0),
-                       coloraxis_colorbar=dict(title=basis))
+    mfig.update_layout(map=dict(style="white-bg", center={"lat": 35.9, "lon": 127.8}, zoom=5.3),
+                       height=430, margin=dict(t=10, b=10, l=0, r=0))
     st.plotly_chart(mfig, use_container_width=True)
     st.caption(MAP_NOTE)
 
