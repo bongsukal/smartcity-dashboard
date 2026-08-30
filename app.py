@@ -12,7 +12,7 @@ import streamlit as st
 
 import smartcity_core as core
 
-st.set_page_config(page_title="스마트도시 지표 대시보드", layout="wide")
+st.set_page_config(page_title="스마트도시 서비스 수준 대시보드", layout="wide")
 
 SHEET_NAME = "스마트도시_웹용 (구글시트)"
 FORMULA_NOTE = ("산식: Z = (원자료 − 평균) ÷ 표준편차(ddof=1) × 방향, "
@@ -73,7 +73,7 @@ if base is None:
 # ── 상단: 제목 · 기준 시각 · 새로 읽기 ──────────────────────────
 head_l, head_r = st.columns([5, 1])
 with head_l:
-    st.title("스마트도시 지표 T점수 대시보드")
+    st.title("스마트도시 서비스 수준 대시보드")
     ts_slot = st.empty()
 with head_r:
     if st.button("🔄 시트에서 새로 읽기", use_container_width=True):
@@ -220,7 +220,7 @@ with c_map:
             geojson=gj, locations=[region], featureidkey="properties.지역",
             z=[0], colorscale=[[0, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0)"]], showscale=False,
             marker_line_color="crimson", marker_line_width=2.5, hoverinfo="skip"))
-    mfig.update_geos(fitbounds="locations", visible=False)
+    mfig.update_geos(fitbounds="locations", visible=False, projection_type="mercator")
     mfig.update_layout(height=430, margin=dict(t=10, b=10, l=0, r=0),
                        coloraxis_colorbar=dict(title=basis))
     st.plotly_chart(mfig, use_container_width=True)
