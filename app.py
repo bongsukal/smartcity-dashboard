@@ -211,9 +211,8 @@ with c_map:
     present["T표시"] = present["T점수"].map(lambda t: f"{t:.1f}" if pd.notna(t) else "—")
     present["상위표시"] = present["백분위"].map(
         lambda p: f"상위 {100 - p:.0f}%" if pd.notna(p) else "—")
-    # 최저값도 순백색이 아닌 옅은 초록으로: 값 있는 지역이 빈 배경·호수(흰색)와 구별되게 한다.
-    is_binary = ind_df["유형"].iloc[0] == "binary"      # 여부형 지표: 옅은 초록 → 초록 2색
-    scale = [[0, "#e4f2e0"], [1, "#74c476"]] if is_binary else px.colors.sequential.Greens[1:]
+    is_binary = ind_df["유형"].iloc[0] == "binary"      # 여부형 지표: 0=흰색, 1=초록 (사용자 지정)
+    scale = [[0, "#ffffff"], [1, "#74c476"]] if is_binary else "Greens"
     if basis == "T점수":
         rng = (100 - clip, clip)
     elif is_binary:
