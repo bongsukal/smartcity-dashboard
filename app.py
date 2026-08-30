@@ -19,9 +19,11 @@ FORMULA_NOTE = ("산식: Z = (원자료 − 평균) ÷ 표준편차(ddof=1) × �
                 "T = 50 + 10Z, 백분위 = Z 평균순위 × 100 (지표별·비교집단 내)")
 MAP_NOTE = "시군구 경계: 2025-06-30 기준(SGIS 코드)"
 GEOJSON_PATH = Path(__file__).parent / "data" / "sgg_korea.geojson"
+SIDO_LINES_PATH = Path(__file__).parent / "data" / "sido_lines.geojson"   # 시도끼리 맞닿은 내부 경계선
 LIGHT_BAR, DARK_BAR = "#9ecae1", "#1c5ba6"     # 진단 막대(50 미만/이상)
 MISS_GRAY = "#d9d9d9"                           # 지도 결측
-BORDER_GRAY = "#999999"                         # 지도 경계선
+BORDER_GRAY = "#999999"                         # 지도 시군구 경계선
+SIDO_BORDER = "#4d4d4d"                         # 지도 시도 경계선(더 굵고 짙게)
 NONE_SGG = "전체"
 NUMFMT = {
     "Z점수": st.column_config.NumberColumn(format="%.2f"),
@@ -62,6 +64,23 @@ def load(sheet_id, group_col):
 def load_geojson():
     gj = json.loads(GEOJSON_PATH.read_text(encoding="utf-8"))
     return gj, {f["properties"]["지역"].strip() for f in gj["features"]}
+
+
+@st.cache_data(show_spinner=False)
+def load_sido_lines():
+    """시도 내부 경계선을 Scattergeo용 lon/lat 배열로 (선 구분은 None)"""
+    gj = json.loads(SIDO_LINES_PATH.read_text(encoding="utf-8"))
+    lons, lats = [], []
+    for f in gj["features"]:
+        g = f["geometry"]
+        segs = g["coordinates"] if g["type"] == "MultiLineString" else [g["coordinates"]]
+        for seg in segs:
+            for x, y in seg:
+                lons.append(x)
+                lats.append(y)
+            lons.append(None)
+            lats.append(None)
+    return lons, lats
 
 
 sheet_id = get_sheet_id()
@@ -215,6 +234,11 @@ with c_map:
             z=[0] * len(missing), colorscale=[[0, MISS_GRAY], [1, MISS_GRAY]], showscale=False,
             marker_line_color=BORDER_GRAY, marker_line_width=0.4,
             hovertemplate="%{location}<br>결측<extra></extra>"))
+    sido_lons, sido_lats = load_sido_lines()
+    mfig.add_trace(go.Scattergeo(          # 시도 내부 경계 오버레이(해안선은 건드리지 않음)
+        lon=sido_lons, lat=sido_lats, mode="lines",
+        line=dict(color=SIDO_BORDER, width=1.4),
+        hoverinfo="skip", showlegend=False))
     if region is not None:
         mfig.add_trace(go.Choropleth(
             geojson=gj, locations=[region], featureidkey="properties.지역",
