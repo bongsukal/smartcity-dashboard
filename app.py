@@ -22,8 +22,8 @@ GEOJSON_PATH = Path(__file__).parent / "data" / "sgg_korea.geojson"
 SIDO_LINES_PATH = Path(__file__).parent / "data" / "sido_lines.geojson"   # 시도끼리 맞닿은 내부 경계선
 LIGHT_BAR, DARK_BAR = "#9ecae1", "#1c5ba6"     # 진단 막대(50 미만/이상)
 MISS_GRAY = "#d9d9d9"                           # 지도 결측
-BORDER_GRAY = "#999999"                         # 지도 시군구 경계선
-SIDO_BORDER = "#8c8c8c"                         # 지도 시도 경계선(시군구보다 약간 굵고 짙게)
+BORDER_GRAY = "#a6a6a6"                         # 지도 시군구 경계선 (1.2px: 타일 미세 어긋남을 덮는 최소 폭)
+SIDO_BORDER = "#7d7d7d"                         # 지도 시도 경계선(시군구보다 굵고 짙게)
 NONE_SGG = "전체"
 NUMFMT = {
     "Z점수": st.column_config.NumberColumn(format="%.2f"),
@@ -211,8 +211,9 @@ with c_map:
     present["T표시"] = present["T점수"].map(lambda t: f"{t:.1f}" if pd.notna(t) else "—")
     present["상위표시"] = present["백분위"].map(
         lambda p: f"상위 {100 - p:.0f}%" if pd.notna(p) else "—")
-    is_binary = ind_df["유형"].iloc[0] == "binary"      # 여부형 지표: 흰색 → 옅은 초록 2색
-    scale = [[0, "#ffffff"], [1, "#74c476"]] if is_binary else "Greens"
+    # 최저값도 순백색이 아닌 옅은 초록으로: 값 있는 지역이 빈 배경·호수(흰색)와 구별되게 한다.
+    is_binary = ind_df["유형"].iloc[0] == "binary"      # 여부형 지표: 옅은 초록 → 초록 2색
+    scale = [[0, "#e4f2e0"], [1, "#74c476"]] if is_binary else px.colors.sequential.Greens[1:]
     if basis == "T점수":
         rng = (100 - clip, clip)
     elif is_binary:
@@ -227,7 +228,7 @@ with c_map:
     mfig = go.Figure(go.Choroplethmap(
         geojson=gj, locations=present["지역"], featureidkey="properties.지역",
         z=present[basis], colorscale=scale, zmin=rng[0], zmax=rng[1],
-        marker_line_color=BORDER_GRAY, marker_line_width=0.7,
+        marker_line_color=BORDER_GRAY, marker_line_width=1.2,
         colorbar=dict(title=basis),
         customdata=present[["지역", "원자료", "T표시", "상위표시", "순위표시"]].to_numpy(),
         hovertemplate="%{customdata[0]}<br>원자료 %{customdata[1]}"
@@ -237,12 +238,12 @@ with c_map:
         mfig.add_trace(go.Choroplethmap(
             geojson=gj, locations=missing["지역"], featureidkey="properties.지역",
             z=[0] * len(missing), colorscale=[[0, MISS_GRAY], [1, MISS_GRAY]], showscale=False,
-            marker_line_color=BORDER_GRAY, marker_line_width=0.7,
+            marker_line_color=BORDER_GRAY, marker_line_width=1.2,
             hovertemplate="%{location}<br>결측<extra></extra>"))
     sido_lons, sido_lats = load_sido_lines()
     mfig.add_trace(go.Scattermap(          # 시도 내부 경계 오버레이(해안선은 건드리지 않음)
         lon=sido_lons, lat=sido_lats, mode="lines",
-        line=dict(color=SIDO_BORDER, width=1.1),
+        line=dict(color=SIDO_BORDER, width=1.6),
         hoverinfo="skip", showlegend=False))
     if region is not None:
         mfig.add_trace(go.Choroplethmap(
